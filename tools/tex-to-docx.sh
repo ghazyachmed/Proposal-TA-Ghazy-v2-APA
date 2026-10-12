@@ -54,7 +54,7 @@ fi
 # Dibuat sekali, lalu boleh disunting sendiri di Word (ubah font, spasi,
 # margin, gaya Heading). Hapus berkasnya untuk mengembalikan ke bawaan.
 if [[ ! -f "$REFDOC" ]]; then
-  echo "==> Membuat templat gaya Word (Times New Roman 12pt, spasi 1,5) ..."
+  echo "==> Membuat templat gaya Word (Times New Roman 12pt, spasi 1,5, rata kiri-kanan) ..."
   pandoc --print-default-data-file reference.docx > "$REFDOC"
   python3 - "$REFDOC" <<'PYEOF'
 import re, shutil, sys, zipfile
@@ -93,6 +93,18 @@ def patch_docdefaults(xml):
         blok = blok.replace(pm.group(), pblok)
     return xml.replace(asli, blok)
 
+def justify_body(xml):
+    """Badan teks rata kiri-kanan (justify), sama dengan PDF template."""
+    m = re.search(r'(<w:style [^>]*w:styleId="BodyText".*?)(</w:style>)', xml, re.S)
+    if not m or "<w:jc " in m.group(1):
+        return xml
+    blok = m.group(1)
+    if "<w:pPr>" in blok:
+        baru = blok.replace("<w:pPr>", '<w:pPr><w:jc w:val="both"/>', 1)
+    else:
+        baru = blok + '<w:pPr><w:jc w:val="both"/></w:pPr>'
+    return xml.replace(blok, baru, 1)
+
 with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
     for item in zin.infolist():
         data = zin.read(item.filename)
@@ -100,6 +112,7 @@ with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATE
             xml = data.decode("utf-8")
             xml = re.sub(r"<w:rFonts[^>]*/>", TNR, xml)   # font: seluruh gaya
             xml = patch_docdefaults(xml)                   # ukuran + spasi: badan saja
+            xml = justify_body(xml)                        # rata kiri-kanan: badan teks
             data = xml.encode("utf-8")
         zout.writestr(item, data)
 shutil.move(tmp, path)

@@ -3,10 +3,23 @@
 \label{chap:pendahuluan}
 % --- Latar Belakang ---
 \section{Latar Belakang}
+% 5W+1H: What, kondisi umum
+Perusahaan kini memakai kecerdasan buatan dalam banyak pekerjaan. Laporan AI Index 2026 mencatat 88\% organisasi sudah memakai kecerdasan buatan \autocite{hai2026aiindex}. Salah satu pemakaiannya adalah chatbot, yaitu program yang menjawab pertanyaan lewat percakapan. LinkedIn, misalnya, membangun chatbot yang mengubah pertanyaan pengguna internal menjadi perintah SQL \autocite{chen2025texttosqlenterprisedataanalytics}.
+
+Chatbot modern memakai \emph{large language model} (LLM), yaitu model bahasa yang dilatih dari teks berjumlah sangat besar. LLM masih menghasilkan pernyataan yang masuk akal tetapi salah. Kesalahan jenis ini disebut halusinasi. \textcite{kalai2025whylanguagemodelshallucinate} menunjukkan bahwa halusinasi tetap muncul pada model terbaru. Menurut mereka, model cenderung menebak saat tidak yakin, mirip siswa yang menebak soal ujian. Cara pelatihan dan evaluasi model justru memberi nilai lebih pada tebakan daripada pengakuan tidak tahu.
+
+Perintah SQL buatan LLM juga terkena halusinasi. Model dapat menebak nama tabel atau kolom yang tidak ada. \textcite{shen2026understanding} memeriksa 4.602 perintah SQL salah dari empat teknik berbasis LLM. Mereka menyusun 27 jenis kesalahan, termasuk kolom yang tidak ada dan kolom pada tabel yang salah. Masalah ini makin berat pada basis data perusahaan yang berisi ribuan tabel. \textcite{gwimm2026beyondharness} menyimpulkan bahwa hambatan lebih banyak berasal dari konteks yang sampai ke model daripada dari modelnya.
+
+
+% 5W+1H: Where & Who, studi kasus
 Engineer produksi di PHE OSES memakai aplikasi Wingman Web App setiap hari. Aplikasi itu menyimpan data operasional sumur, pompa, dan barge. Barge adalah kapal kerja lepas pantai. Engineer memakai data itu untuk menyusun pekerjaan harian.
 
 Wingman Web App memuat sebuah chatbot bernama Wingman Assistant. Engineer menulis pertanyaan dalam bahasa Indonesia. Chatbot mengubah pertanyaan itu menjadi perintah SQL. Chatbot menjalankan perintah itu ke basis data. Chatbot lalu menulis jawaban berbentuk kalimat dan tabel. Cara kerja ini disebut Text-to-SQL, yaitu pengubahan pertanyaan manusia menjadi perintah basis data.
 
+Pengaturan Wingman Assistant saat ini memakai model qwen3.5:9b. Model itu berjalan lokal melalui Ollama pada laptop server berkartu grafis 12 GB. Ollama adalah perangkat lunak untuk menjalankan LLM di komputer sendiri.
+
+
+% 5W+1H: When & What, kejadian di Wingman
 Basis data Wingman berukuran besar. Skema public berisi 206 tabel dan 3.249 kolom. Skema itu memuat 439 foreign key. Foreign key adalah penanda hubungan antartabel. Chatbot harus memilih tabel yang benar dari 206 pilihan tersebut.
 
 Basis data hampir tidak menyimpan penjelasan tabel. PostgreSQL menyediakan fasilitas COMMENT untuk menyimpan keterangan. Skema public memakai fasilitas itu pada 15 tabel dan 1 kolom saja. Chatbot menebak arti sebuah kolom dari nama kolomnya.
@@ -21,27 +34,65 @@ Jawaban itu memuat dua nomor baris, yaitu 6084 dan 6085. Penulis mencari kedua n
 
 Engineer lalu menanyakan sumber data kepada chatbot. Chatbot menjawab bahwa dirinya tidak menjalankan query. Catatan langkah mencatat 12 perintah SQL. Pengakuan chatbot bertentangan dengan catatan langkahnya sendiri.
 
+Percakapan yang sama juga memuat pertanyaan statistik status sumur. Perintah SQL chatbot memakai kode status RUNNING dan P. Kedua kode itu tidak ada pada tabel well\_status. Tabel jawaban chatbot mencatat jumlah DHP 61, 174, dan 48 untuk tiga area. Baris total pada jawaban yang sama menulis 183. Jumlah ketiga angka itu sebenarnya 283.
+
+
+% 5W+1H: Why, dari gejala ke akar masalah
 Penulis membagi masalah di atas menjadi dua kelas. Kelas pertama adalah pemilihan tabel dan kolom. Chatbot memilih tabel atau kolom yang salah, lalu perintah SQL gagal. Kelas kedua adalah kesesuaian jawaban dengan hasil query. Chatbot menulis nilai yang tidak punya pasangan pada hasil query.
 
+Gejala di atas belum tentu menunjukkan akar masalah. Penulis menelusuri kode Wingman untuk mencari kesalahan penentu. Kesalahan penentu adalah kesalahan yang mengubah hasil gagal menjadi berhasil jika diperbaiki \autocite{zhang2025whichagent}. Penulis menemukan tiga akar untuk kelas pertama.
+
+Akar pertama ada pada \emph{prompt}, yaitu teks instruksi yang dikirim ke model. Prompt chatbot hanya memuat aturan, pengetahuan tambahan maksimal 8.000 karakter, dan riwayat percakapan. Prompt itu tidak memuat daftar tabel dan kolom. Chatbot sendiri menulis bahwa dirinya tidak punya dokumentasi skema barge.
+
+Akar kedua ada pada basis data. Basis data tidak menyimpan arti kolom dan daftar nilai yang sah. Akar ini cocok dengan munculnya kode RUNNING dan P.
+
+Akar ketiga ada pada pengaturan panjang konteks. Pekerja chatbot tidak mengirim pengaturan panjang konteks ke Ollama. Ollama memakai konteks 4K \emph{token} sebagai bawaan untuk kartu grafis di bawah 24 GiB \autocite{ollamacontextlength}. Panjang konteks yang benar-benar berlaku di laptop server belum diketahui. Penulis menduga riwayat langkah terpotong sehingga chatbot meminta ulang daftar kolom pada langkah 19.
+
+Kelas kedua punya akar yang berbeda. Riwayat percakapan hanya membawa teks pertanyaan dan jawaban, tanpa perintah SQL dan hasilnya. Penulis juga tidak menemukan langkah pencocokan jawaban dengan hasil query sebelum jawaban dikirim.
+
+
+% 5W+1H: Why, urgensi
 Engineer produksi memakai jawaban chatbot untuk pekerjaan lapangan. Jadwal barge menentukan urutan pemasangan dan penarikan pompa. Jawaban yang salah dapat menggeser urutan pekerjaan itu. Engineer harus memeriksa ulang setiap jawaban ke basis data. Pemeriksaan ulang menghapus manfaat chatbot itu sendiri. Penulis belum mengukur kerugian waktu maupun biaya dalam angka.
 
-Peneliti lain sudah mengusulkan beberapa cara. \textcite{talaei2024chesscontextualharnessingefficient} membangun sistem CHESS. Sistem itu memakai komponen Schema Selector. Komponen tersebut memangkas skema sebelum sistem menulis SQL. Pada skema gabungan berisi 4.337 kolom, komponen itu menaikkan akurasi sebesar 2\%. Komponen itu juga memakai token 5 kali lebih sedikit.
 
-Talaei dkk. menguji sistemnya tanpa sebagian komponen. Tanpa langkah select\_tables, nilai execution accuracy turun 6,12 poin. Tanpa langkah revise, nilai tersebut turun 6,80 poin. Pengujian itu memakai 147 soal.
+% 5W+1H: How, solusi yang sudah ada
+Peneliti sudah menguji beberapa cara untuk akar kelas pertama. \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} membangun metadata basis data secara otomatis. Metadata adalah data yang menjelaskan isi dan arti data lain. Mereka memakai profil data, analisis riwayat query, dan ringkasan SQL buatan LLM. BIRD adalah kumpulan soal uji Text-to-SQL yang umum dipakai. Sistem mereka menempati peringkat pertama BIRD pada 2024 dan 2025 dengan profil data saja. Mereka juga mencatat bahwa pakar sering tidak memahami seluruh isi basis datanya sendiri.
 
-Perusahaan besar sudah memakai cara serupa. Uber melaporkan sistem QueryGPT pada tahun 2024. Uber memperkirakan waktu menulis query turun dari 10 menit menjadi 3 menit. Pinterest melaporkan tugas 35\% lebih cepat. Pinterest juga melaporkan penerimaan jawaban pertama naik dari 20\% menjadi di atas 40\%.
+\textcite{giancotti2026dataatlas} membuat kamus data dengan LLM untuk data klinis. Akurasi eksekusi adalah bagian soal yang hasil query-nya sama dengan jawaban benar. Kamus itu menaikkan akurasi eksekusi dari 0,52 menjadi 0,88. Mereka menyarankan agar hasil LLM melengkapi kurasi pakar, bukan menggantikannya.
+
+\textcite{he2026oilragsql} menerapkan cara serupa pada data lapangan minyak. Basis pengetahuan mereka memuat definisi tabel, komentar kolom, glosarium istilah, dan aturan hitung bisnis. Kesalahan penyelarasan skema mencakup 38\% kesalahan pada soal sulit dan sangat sulit.
+
+\textcite{gwimm2026beyondharness} menguji 5.176 query produksi dari sebuah peritel daring besar. Kartu referensi SQL dari riwayat query menaikkan kemiripan struktur SQL sebesar 12 sampai 25\% secara relatif. Perbaikan alur pengambilan konteks hanya menaikkan 3 sampai 12\%. Kesalahan pengaitan pertanyaan ke skema tetap menjadi jenis kesalahan terbanyak, yaitu sekitar 42 sampai 44\%.
 
 Peneliti juga menguji Text-to-SQL pada basis data perusahaan. \textcite{lei2025spider20evaluatinglanguage} menyusun Spider 2.0. Sistem terbaik hanya menjawab benar 21,3\% soal pada kumpulan itu. Sistem serupa menjawab benar 73,0\% pada BIRD dan 91,2\% pada Spider 1.0.
 
 \textcite{liao2026entsqlbenchmarkgroundingtexttosql} menyusun EntSQL. Mereka mencatat 96,0\% contoh membutuhkan pengetahuan di luar skema. Sistem terbaik menjawab benar 15,9\% dengan dokumen panjang. Nilai itu naik menjadi 21,4\% dengan keterangan ringkas.
 
-Cara di atas belum menjawab kasus Wingman sepenuhnya. Talaei dkk. memakai skema gabungan, bukan basis data produksi. Konfigurasi terbaik mereka memakai 20 kandidat SQL dan 10 uji unit per pertanyaan. Wingman membatasi satu pekerjaan pada 60 perintah SQL. Penulis menilai konfigurasi tersebut berat untuk batas itu.
 
-Uber dan Pinterest melaporkan angka dari catatan internal. Uber menyebut angkanya sebagai perkiraan. Pinterest menulis bahwa datanya tidak mengontrol perbedaan tugas. Penulis memakai kedua angka itu sebagai gambaran arah saja.
+% 5W+1H: How, kelemahan solusi yang ada
+Cara di atas belum menjawab kasus Wingman sepenuhnya. Shkapenyuk dkk. memakai GPT-4o, sedangkan He dkk. memakai GPT-4 dan Qwen-max. Gwimm dan Eisenach memakai Claude Sonnet dan Qwen Coder 30B. Wingman memakai model 9 miliar parameter yang berjalan lokal. Konteks Wingman juga belum memuat skema, arti kolom, maupun nilai yang sah. Penulis belum menemukan studi yang menguji metadata skema pada model lokal seukuran itu di basis data produksi migas.
 
-Cara di atas mengukur satu hal, yaitu kebenaran perintah SQL. Cara itu tidak memeriksa kalimat jawaban. Kasus Wingman menunjukkan perintah SQL berhasil pada langkah 24. Jawaban akhir tetap tidak cocok dengan hasil query. \textcite{NEURIPS2023_ed3fea90} menunjukkan penjelasan model bisa masuk akal tetapi tidak setia pada proses aslinya.
 
-Celah tersebut menjadi dasar tugas akhir ini. Penulis akan membandingkan beberapa cara pemilihan tabel. Penulis juga akan membandingkan beberapa cara pemeriksaan jawaban. Penulis mengukur keduanya pada basis data Wingman.
+% 5W+1H: How, solusi tugas akhir ini
+Celah tersebut menjadi dasar tugas akhir ini. Tugas akhir ini berfokus pada kelas pertama, yaitu pemilihan tabel dan kolom. Penulis mengusulkan \emph{schema card}, yaitu dokumen ringkas tentang arti, nilai sah, dan relasi setiap tabel. Penulis menyusun schema card dari skema, profil data, dan kode aplikasi Wingman. Pakar Wingman memeriksa isi schema card sebelum chatbot memakainya. Penulis juga memasang panjang konteks yang cukup agar schema card tidak terpotong. Penulis lalu mengukur pengaruh schema card terhadap jumlah tabel, kolom, dan nilai karangan. Kelas kedua menjadi saran untuk penelitian lanjutan.
+
+% === TEKS LAMA PENULIS, dipindah ke komentar 11 Oktober 2026 ===
+% Alasan: memakai sumber 2024 (CHESS, Uber, Pinterest) atau rencana lama (pemilihan tabel bertahap & pemeriksaan jawaban).
+% Teks tidak dihapus. Hapus blok komentar ini kalau penulis sudah tidak memakainya.
+% Peneliti lain sudah mengusulkan beberapa cara. \textcite{talaei2024chesscontextualharnessingefficient} membangun sistem CHESS. Sistem itu memakai komponen Schema Selector. Komponen tersebut memangkas skema sebelum sistem menulis SQL. Pada skema gabungan berisi 4.337 kolom, komponen itu menaikkan akurasi sebesar 2\%. Komponen itu juga memakai token 5 kali lebih sedikit.
+%
+% Talaei dkk. menguji sistemnya tanpa sebagian komponen. Tanpa langkah select\_tables, nilai execution accuracy turun 6,12 poin. Tanpa langkah revise, nilai tersebut turun 6,80 poin. Pengujian itu memakai 147 soal.
+%
+% Perusahaan besar sudah memakai cara serupa. Uber melaporkan sistem QueryGPT pada tahun 2024. Uber memperkirakan waktu menulis query turun dari 10 menit menjadi 3 menit. Pinterest melaporkan tugas 35\% lebih cepat. Pinterest juga melaporkan penerimaan jawaban pertama naik dari 20\% menjadi di atas 40\%.
+%
+% Cara di atas belum menjawab kasus Wingman sepenuhnya. Talaei dkk. memakai skema gabungan, bukan basis data produksi. Konfigurasi terbaik mereka memakai 20 kandidat SQL dan 10 uji unit per pertanyaan. Wingman membatasi satu pekerjaan pada 60 perintah SQL. Penulis menilai konfigurasi tersebut berat untuk batas itu.
+%
+% Uber dan Pinterest melaporkan angka dari catatan internal. Uber menyebut angkanya sebagai perkiraan. Pinterest menulis bahwa datanya tidak mengontrol perbedaan tugas. Penulis memakai kedua angka itu sebagai gambaran arah saja.
+%
+% Cara di atas mengukur satu hal, yaitu kebenaran perintah SQL. Cara itu tidak memeriksa kalimat jawaban. Kasus Wingman menunjukkan perintah SQL berhasil pada langkah 24. Jawaban akhir tetap tidak cocok dengan hasil query. \textcite{NEURIPS2023_ed3fea90} menunjukkan penjelasan model bisa masuk akal tetapi tidak setia pada proses aslinya.
+%
+% Celah tersebut menjadi dasar tugas akhir ini. Penulis akan membandingkan beberapa cara pemilihan tabel. Penulis juga akan membandingkan beberapa cara pemeriksaan jawaban. Penulis mengukur keduanya pada basis data Wingman.
+%
 
 % --- Rumusan Masalah ---
 \section{Rumusan Masalah}
