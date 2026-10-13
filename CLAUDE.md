@@ -169,6 +169,15 @@ Semua angka hasil hitungan ditulis ke docs/01-FAKTA.md beserta kolom sumber, car
 Tambah baris di CHANGELOG paling bawah file itu: tanggal, angka yang ditambah, & sesi nya.
 Perbarui baris "Update terakhir" di file yang berubah, lalu laporkan file mana yang perlu diupload ulang ke Konteks Project.
 
+## Status dokumen konteks
+Isi folder docs (00-STATE.md sampai 07-DRAFT-SCOPE.md, catatan, & salinan jawaban chat lain) adalah bahan kerja, BUKAN sumber kebenaran mutlak.
+- Docs bisa salah atau usang. Contoh yang sudah terjadi: 202 Table (yang benar 206), status paper Spider-Ent "under review" (ternyata withdrawn), & sumber angka EntSQL 96,0% yang ditulis "abstract" padahal angka itu ada di teks penuh, bukan di abstrak
+- Tiap klaim, angka, & keputusan tetap wajib punya justifikasi metode ilmiah: sumber primer (paper, dokumentasi resmi, kode, dump), metode yang bisa dikutip, atau validasi domain expert. "Sudah tertulis di docs" bukan justifikasi
+- Kalau docs bertentangan dengan sumber primer, ikuti sumber primer, laporkan selisih nya, & jangan menimpa docs tanpa izin penulis
+- Keputusan & daftar di docs yang belum punya dasar metode, contoh daftar Table scope, diperlakukan sebagai hipotesis kerja
+- Paper yang aksesnya tertutup: ambil bagian publik (abstrak, data availability, catatan kaki, review), atau cari paper lain yang mengutip nya
+- Pakai label VERIFIED, SEKUNDER, INFERENSI, & TIDAK TAHU untuk klaim yang status nya belum jelas
+
 ## Larangan
 - Repo ini publik. Jangan commit folder docs & folder data, keduanya ada di .gitignore
 - Jangan commit apa pun sebelum penulis memeriksa

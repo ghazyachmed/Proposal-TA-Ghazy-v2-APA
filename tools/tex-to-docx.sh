@@ -153,9 +153,11 @@ LOG="$OUTDIR/pandoc.log"
     --output="$OUTFILE" \
     --resource-path=".:images:tables:listings:algorithms" \
     --reference-doc="$REFDOC" \
+    --metadata=lang:id-ID \
     --citeproc \
     --bibliography="$BIB" \
     --csl="$CSL" \
+    --lua-filter="$ROOT/tools/sitasi-ta-sti.lua" \
     --toc \
     --toc-depth=3
 ) 2> >(tee "$LOG" >&2)
