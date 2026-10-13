@@ -7,6 +7,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 MD="docs/Konsultasi-Latar-Belakang.md"
 OUT="docs/Konsultasi-Latar-Belakang.docx"
+# Pengaman: sejak 13 Okt 2026 Bab I bisa disunting langsung di .tex (sesi lain).
+# Kalau .tex lebih baru dari Markdown, skrip berhenti supaya Bab I & DOCX tidak tertimpa versi lama.
+# Samakan Markdown dulu, atau jalankan dengan PAKSA=1 bila yakin Markdown yang benar.
+if [[ "Bab I - Pendahuluan.tex" -nt "$MD" && "${PAKSA:-0}" != "1" ]]; then
+  echo "BERHENTI: 'Bab I - Pendahuluan.tex' lebih baru dari $MD. Bab I & DOCX tidak diubah." >&2
+  exit 1
+fi
 BIBS=(--bibliography daftar-pustaka.bib)
 # Entri usulan yang belum disetujui ikut dipakai di DOCX konsultasi saja
 [[ -f docs/usulan-pustaka-2.bib ]] && BIBS+=(--bibliography docs/usulan-pustaka-2.bib)
