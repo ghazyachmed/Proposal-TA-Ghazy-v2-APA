@@ -4,47 +4,125 @@
 % --- Latar Belakang ---
 \section{Latar Belakang}
 % Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
-\emph{Text-to-SQL} adalah pengubahan pertanyaan bahasa alami menjadi perintah SQL. Tugas akhir ini menemukan enam penerapan Text-to-SQL pada data internal organisasi yang terbit pada 2025 sampai 2026 \autocite{chen2025texttosqlenterprisedataanalytics,menon2025fisql,gwimm2026beyondharness,chen2025adeptsql,he2026oilragsql,macedo2026twolayer}. Tiga di antaranya memakai data migas, yang dirinci pada Tabel~\ref{tab:penelitian-ada}.
+Laporan AI Index 2026 mencatat 88\% organisasi sudah memakai kecerdasan buatan \autocite{hai2026aiindex}. Salah satu bentuknya adalah chatbot \emph{Text-to-SQL}. Chatbot ini memakai \emph{large language model} (LLM) untuk mengubah pertanyaan menjadi perintah SQL. LLM dapat berhalusinasi, yaitu menulis pernyataan yang tampak masuk akal tetapi salah \autocite{kalai2025whylanguagemodelshallucinate}. Halusinasi skema adalah tabel, kolom, atau nilai buatan model yang tidak ada di basis data \autocite{qu2024tasql,shen2026understanding}.
 
-Text-to-SQL memakai \emph{large language model} (LLM), yaitu model bahasa yang dilatih dari teks berskala besar. LLM dapat berhalusinasi, yaitu menghasilkan pernyataan yang tampak masuk akal tetapi salah, sehingga kepercayaan pengguna turun \autocite{kalai2025whylanguagemodelshallucinate}. Pada Text-to-SQL, halusinasi muncul sebagai nama tabel, kolom, atau nilai filter yang tampak masuk akal tetapi tidak ada di basis data \autocite{shen2026understanding,macedo2026twolayer}. Tugas akhir ini menyebutnya halusinasi skema. Empat dari enam penerapan tadi melaporkan kesalahan jenis ini \autocite{chen2025texttosqlenterprisedataanalytics,gwimm2026beyondharness,he2026oilragsql,macedo2026twolayer}. Dua di antaranya memakai agen perbaikan SQL otomatis, tetapi tetap berhalusinasi \autocite{chen2025texttosqlenterprisedataanalytics,macedo2026twolayer}.
+Ditemukan enam penerapan Text-to-SQL pada data organisasi 2025 sampai 2026 \autocite{chen2025texttosqlenterprisedataanalytics,chen2025adeptsql,gwimm2026beyondharness,he2026oilragsql,macedo2026twolayer,menon2025fisql}. Empat penerapan melaporkan halusinasi skema \autocite{chen2025texttosqlenterprisedataanalytics,gwimm2026beyondharness,he2026oilragsql,macedo2026twolayer}. Dua penerapan memakai agen perbaikan SQL seperti WINGman dan tetap berhalusinasi \autocite{chen2025texttosqlenterprisedataanalytics,macedo2026twolayer}.
 
-Masalah yang sama muncul di WINGman Web App milik PHE OSES. Engineer produksi memakai aplikasi ini untuk data sumur, pompa, dan barge atau kapal kerja lepas pantai. Chatbot WINGman Assistant memakai model lokal qwen3.5:9b. Basis datanya berisi 206 tabel, tetapi hanya 15 tabel yang memiliki keterangan. Pada satu percakapan nyata, tiga dari 12 perintah SQL gagal karena nama kolom yang salah. Chatbot juga memakai kode status RUNNING dan P yang tidak ada di basis data.
-
-Investigasi kode WINGman menemukan dua akar masalah. Akar pertama ada pada \emph{prompt}, yaitu teks instruksi untuk model. Prompt WINGman tidak memuat daftar tabel, kolom, dan nilai di basis data. Akar kedua ada pada \emph{worker}, yaitu program terpisah di server yang meneruskan pertanyaan pengguna ke model. \emph{Worker} tidak mengatur panjang konteks yang dibaca model. Akibatnya, model tidak mengenal empat hal pada setiap pertanyaan. Keempatnya adalah (1) tabel dan kolom, (2) nilai data di setiap kolom, misalnya kode status sumur DHP, (3) arti tiap kolom, dan (4) jalur relasi antartabel.
-
-Engineer harus memeriksa ulang setiap jawaban ke basis data, sehingga manfaat chatbot hilang. Jawaban yang salah dapat menggeser urutan pemasangan dan penarikan pompa pada jadwal barge. Perusahaan migas membatasi data sensitif pada lingkungan yang disetujui \autocite{taiwo2026evaluating}, dan WINGman memenuhinya dengan model lokal 9B. Model lemah lebih sering salah. Kesalahan semantik GPT-3.5 turun 48,7 sampai 80,4\% saat diganti GPT-4o \autocite{shen2026understanding}.
-
-Penelitian yang sudah ada menangani masalah ini dengan metadata, yaitu data penjelas isi basis data (Tabel~\ref{tab:penelitian-ada}). Alternatif lain, yaitu perbaikan alur agen, hanya menaikkan kemiripan SQL 3 sampai 12\%, sedangkan perbaikan konteks 12 sampai 25\% \autocite{gwimm2026beyondharness}.
+WINGman Web App milik PHE OSES mengalami masalah yang sama. Engineer produksi memakai aplikasi ini untuk data sumur, pompa, dan barge, yaitu kapal kerja lepas pantai. Chatbot WINGman Assistant memakai model lokal qwen3.5:9b. Basis data WINGman berisi 206 tabel. Hanya 15 tabel yang memiliki keterangan. Empat dari 12 perintah SQL gagal pada satu percakapan nyata. Tabel~\ref{tab:masalah} merangkum delapan masalah dari percakapan itu dan dari kode WINGman.
 
 \begin{table}[!htbp]
-  \caption{Perbedaan penelitian yang sudah ada dengan kasus WINGman}
-  \label{tab:penelitian-ada}
+  \caption{Masalah WINGman Assistant dan buktinya}
+  \label{tab:masalah}
   \footnotesize
-  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{2.2cm}|}
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.8cm}|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{1.2cm}|}
     \hline
-    Penelitian & Masalah & Cara & Model \\
+    \textbf{Kode} & \textbf{Masalah} & \textbf{Bukti di WINGman} & \textbf{Akar} \\
     \hline
-    \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} & Metadata manual mahal, soal umum BIRD & \emph{Data profiling}, log query, deskripsi LLM & GPT-4o \\
+    \textbf{M1} & Model tidak mengenal tabel dan kolom & Tiga kolom karangan: platform\_code, barage\_name, dan status & Akar 1 \\
     \hline
-    \textcite{giancotti2026dataatlas} & Kamus data klinis belum tersedia & \emph{Data profiling}, deskripsi LLM, kurasi pakar & GPT, Gemini, Llama 8B lokal \\
+    \textbf{M2} & Model tidak mengenal nilai data & Kode status RUNNING dan P tidak ada di basis data & Akar 1 \\
     \hline
-    \textcite{chen2025adeptsql}, ADEPT-SQL & Basis data kilang lebih dari 100 tabel & Metadata 19 tabel dan contoh soal-SQL & Qwen2.5 7B \\
+    \textbf{M3} & Model tidak mengenal arti kolom & Jadwal Oktober sampai November disebut aktif hari ini & Akar 1 \\
     \hline
-    \textcite{he2026oilragsql}, OilRAGSQL & Istilah lapangan minyak dan query kompleks & Basis pengetahuan dan \emph{retrieval} dua tahap & GPT-4, Qwen-max (API) \\
+    \textbf{M4} & Model tidak mengenal jalur relasi & Tabel wells ke areas butuh empat lompatan. JOIN yang salah menghasilkan nol baris tanpa error & Akar 1 \\
     \hline
-    \textcite{macedo2026twolayer} & Kolom dan nilai karangan di migas lepas pantai & Pencocokan nilai dan contoh SQL & Gemini-3-Flash \\
+    \textbf{M5} & Susunan query salah & Alias ws, yaitu nama singkat tabel, dipakai tanpa didefinisikan & Lain \\
     \hline
-    Tugas akhir ini & Model lokal tidak mengenal empat hal di data hulu migas & Kamus data dan validasi pakar & qwen3.5:9b lokal \\
+    \textbf{M6} & Isi yang sudah dibaca hilang dari konteks & Daftar kolom barge\_schedules diminta ulang & Akar 2 \\
+    \hline
+    \textbf{M7} & Kalimat jawaban tidak cocok dengan hasil query & Total DHP ditulis 183, padahal tabel jawaban berjumlah 283 & Lain \\
+    \hline
+    \textbf{M8} & Chatbot lupa query sebelumnya & Chatbot mengaku tidak menjalankan query, padahal log mencatat 12 query & Lain \\
     \hline
   \end{tabularx}
+  \par\vspace{4pt}
+  \parbox{\textwidth}{\footnotesize \emph{Worker} = program server yang meneruskan pertanyaan ke model. \emph{Prompt} = teks instruksi untuk model. Ollama = perangkat lunak penjalan model lokal. Akar 1 = \emph{worker} menyusun prompt tanpa skema. Akar 2 = \emph{worker} tidak mengatur panjang konteks. Lain = model salah menyusun query (M5), model salah merangkum hasil (M7), dan riwayat tanpa catatan query (M8).}
 \end{table}
 
-\textcite{shkapenyuk2025automaticmetadataextractiontexttosql} sudah menggabungkan keempat hal tersebut pada soal umum BIRD dengan GPT-4o. Gabungan itu menaikkan akurasi dari 49,8\% tanpa metadata menjadi 63,2\%, sedangkan satu sumber metadata hanya 59,6 sampai 61,2\%. Di data migas, \textcite{macedo2026twolayer} baru menutup hal (2) lewat pencocokan nilai filter. ADEPT-SQL dan OilRAGSQL mengandalkan komentar kolom untuk hal (3) \autocite{chen2025adeptsql,he2026oilragsql}, padahal WINGman hanya punya keterangan pada 15 tabel. Tugas akhir ini belum menemukan uji kamus data otomatis dengan LLM lokal 9B pada data hulu migas. Tugas akhir ini mengusulkan kamus data (\emph{data dictionary}) untuk menutup keempat hal tersebut.
+\emph{Worker} tidak mengirim setelan konteks 65.536 token ke Ollama. Ollama memakai konteks bawaan 4K untuk GPU di bawah 24 GiB bila server tidak diatur \autocite{ollamacontextlength}. \emph{Worker} juga membatasi pengetahuan di prompt sampai 8.000 karakter.
+
+Engineer harus memeriksa ulang setiap jawaban ke basis data. Jawaban yang salah dapat menggeser urutan pemasangan dan penarikan pompa pada jadwal barge. Perusahaan migas membatasi data sensitif pada lingkungan yang disetujui \autocite{taiwo2026evaluating}. WINGman memakai model lokal 9B untuk memenuhi batasan itu. Model yang lebih lemah lebih sering salah \autocite{shen2026understanding}.
+
+Penelitian terdahulu menambah metadata, memilih tabel dan kolom lebih dulu (\emph{schema linking}), atau menulis ulang SQL yang ditolak (perbaikan SQL). Metadata adalah data penjelas isi basis data. Tabel~\ref{tab:cakupan} memetakannya.
+
+\begin{table}[!htbp]
+  \caption{Cakupan penelitian yang sudah ada terhadap masalah WINGman}
+  \label{tab:cakupan}
+  \scriptsize
+  \setlength{\tabcolsep}{2pt}
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.0cm}|*{6}{>{\centering\arraybackslash}X|}}
+    \hline
+    \textbf{Masalah} & \textbf{Shkapenyuk dkk.\ 2025} & \textbf{Giancotti dkk.\ 2026} & \textbf{ADEPT-SQL} & \textbf{OilRAGSQL} & \textbf{Macedo dkk.\ 2026} & \textbf{Tugas akhir ini} \\
+    \hline
+    \textbf{Data} & BIRD & Klinis & Kilang & Ladang minyak & Lepas pantai & Hulu migas \\
+    \hline
+    \textbf{Model} & GPT-4o & Llama 8B lokal & Qwen2.5 7B lokal & GPT-4 & Gemini-3-Flash & qwen3.5:9b lokal \\
+    \hline
+    \textbf{M1 Tabel, kolom} & Ya & Ya & Ya & Ya & Ya & Ya \\
+    \hline
+    \textbf{M2 Nilai} & Ya & Ya &  &  & Ya & Ya \\
+    \hline
+    \textbf{M3 Arti kolom} & Ya & Ya & Ya & Ya & Ya & Ya \\
+    \hline
+    \textbf{M4 Relasi} & Ya & Ya &  &  &  & Ya \\
+    \hline
+    \textbf{M5 Susunan SQL} &  &  &  &  & Ya & Tidak diubah \\
+    \hline
+    \textbf{M6 Konteks} &  &  &  &  &  & Ya \\
+    \hline
+    \textbf{M7 Jawaban} &  &  &  &  &  & Diukur saja \\
+    \hline
+    \textbf{M8 Riwayat} &  &  &  &  &  &  \\
+    \hline
+    \textbf{Cakupan} & \textbf{4/8 (50\%)} & \textbf{4/8 (50\%)} & \textbf{2/8 (25\%)} & \textbf{2/8 (25\%)} & \textbf{4/8 (50\%)} & \textbf{5/8 (62,5\%)} \\
+    \hline
+  \end{tabularx}
+  \par\vspace{4pt}
+  \parbox{\textwidth}{\footnotesize ADEPT-SQL = \textcite{chen2025adeptsql}. OilRAGSQL = \textcite{he2026oilragsql}. Sel kosong = tidak ditemukan pada bagian paper yang dibaca. Tidak diubah = WINGman sudah punya perbaikan SQL. Diukur saja = dihitung, tidak diperbaiki. Cakupan = jumlah Ya dibagi 8, bukan akurasi.}
+\end{table}
+
+ADEPT-SQL dan OilRAGSQL mengandalkan komentar kolom \autocite{chen2025adeptsql,he2026oilragsql}. WINGman hanya punya keterangan pada 15 tabel. Penulis belum menemukan uji kamus data otomatis dengan LLM lokal 9B pada data hulu migas. Tabel~\ref{tab:pendekatan-masalah} memetakan setiap pendekatan ke masalah WINGman.
+
+\begin{table}[!htbp]
+  \caption{Pendekatan, masalah yang ditangani, dan keputusan}
+  \label{tab:pendekatan-masalah}
+  \scriptsize
+  \setlength{\tabcolsep}{2.5pt}
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|*{8}{>{\centering\arraybackslash}p{0.42cm}|}>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{2.4cm}|}
+    \hline
+    \textbf{Pendekatan} & \textbf{M1} & \textbf{M2} & \textbf{M3} & \textbf{M4} & \textbf{M5} & \textbf{M6} & \textbf{M7} & \textbf{M8} & \textbf{Cakupan} & \textbf{Keputusan} \\
+    \hline
+    \textbf{1. Ekstraksi skema} & Ya &  &  & Ya &  &  &  &  & 2/8 (25\%) & Diuji per langkah \\
+    \hline
+    \textbf{2. \emph{Data profiling}} &  & Ya &  &  &  &  &  &  & 1/8 (12,5\%) & Diuji per langkah \\
+    \hline
+    \textbf{3. \emph{Query history mining}} &  &  &  & Ya &  &  &  &  & 1/8 (12,5\%) & Diuji per langkah \\
+    \hline
+    \textbf{4. Deskripsi LLM + pakar} &  &  & Ya &  &  &  &  &  & 1/8 (12,5\%) & Diuji per langkah \\
+    \hline
+    \textbf{Kamus data (1+2+3+4)} & \textbf{Ya} & \textbf{Ya} & \textbf{Ya} & \textbf{Ya} &  &  &  &  & \textbf{4/8 (50\%)} & \textbf{Diuji utuh} \\
+    \hline
+    \textbf{Pengaturan konteks} &  &  &  &  &  & Ya &  &  & 1/8 (12,5\%) & Dipasang tetap \\
+    \hline
+    \textbf{\emph{Schema linking}} & Ya &  &  &  &  &  &  &  & 1/8 (12,5\%) & Dibahas Bab III \\
+    \hline
+    \textbf{Perbaikan SQL} & Ya &  &  &  & Ya &  &  &  & 2/8 (25\%) & Tidak diubah \\
+    \hline
+    \textbf{Pemeriksaan jawaban} &  &  &  &  &  &  & Ya &  & 1/8 (12,5\%) & Diukur saja \\
+    \hline
+    \textbf{Memori percakapan} &  &  &  &  &  &  &  & Ya & 1/8 (12,5\%) & Di luar lingkup \\
+    \hline
+  \end{tabularx}
+  \par\vspace{4pt}
+  \parbox{\textwidth}{\footnotesize Ya = pustaka melaporkan pendekatan itu menangani masalah tersebut. Diuji utuh = kamus lengkap dibanding sistem asli. Diuji per langkah = langkah 1 sampai 4 ditambah satu per satu. Dipasang tetap = aktif di semua konfigurasi uji. Dibahas Bab III = dibandingkan tanpa diuji. Sumber: \textcite{shkapenyuk2025automaticmetadataextractiontexttosql}, \textcite{giancotti2026dataatlas}, \textcite{macedo2026twolayer}, \textcite{qu2024tasql}, \textcite{shen2026understanding}, \textcite{maamari2024deathschemalinking}, \textcite{min2023factscore}, \textcite{es2023ragas}, \textcite{laban2025llmsgetlost}, \textcite{ollamacontextlength}.}
+\end{table}
+
+Tugas akhir ini hanya menguji kamus data. Gabungan metadata mencapai akurasi 63,2\%. Satu sumber metadata hanya mencapai 59,6 sampai 61,2\% \autocite{shkapenyuk2025automaticmetadataextractiontexttosql}. Model qwen3.5:9b memakai 6,6 GB dari GPU 12 GB. Penulis memperkirakan kamus 23 tabel muat di sisa 5,4 GB tanpa \emph{schema linking}. Bab III tetap membahasnya karena model kecil bisa terbantu \autocite{maamari2024deathschemalinking}.
 
 % --- Rumusan Masalah ---
 \section{Rumusan Masalah}
 % Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
-WINGman Assistant menulis tabel, kolom, dan nilai yang tidak ada di basis data karena prompt-nya tidak memuat skema. Engineer harus memeriksa ulang setiap jawaban, sehingga manfaat chatbot hilang. Tugas akhir ini mengusulkan kamus data di prompt. Tugas akhir ini menjawab tiga pertanyaan penelitian (\emph{research question}, RQ) berikut.
+WINGman Assistant menulis tabel, kolom, dan nilai yang tidak ada di basis data karena prompt-nya tidak memuat skema. \emph{Worker}-nya juga tidak mengatur panjang konteks, sehingga keterangan skema dapat terpotong. Engineer harus memeriksa ulang setiap jawaban, sehingga manfaat chatbot hilang. Tugas akhir ini mengusulkan kamus data di prompt dengan panjang konteks yang diatur. Tugas akhir ini menjawab tiga pertanyaan penelitian (\emph{research question}, RQ) berikut.
 
 \begin{enumerate}
 \item	Apakah kamus data mengurangi halusinasi skema pada SQL buatan WINGman Assistant?
@@ -66,9 +144,34 @@ Tujuan tugas akhir ini adalah mengurangi halusinasi skema WINGman Assistant deng
 % --- Batasan Masalah ---
 \section{Ruang Lingkup, Asumsi, dan Batasan Masalah}
 % Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
-Tugas akhir ini membandingkan WINGman Assistant sebelum dan sesudah kamus data dipasang. Model, \emph{worker}, dan panjang konteks dibuat sama, sehingga perbedaannya hanya isi prompt. Rincian skenario pengujian ditulis di Bab V setelah masalah dan pendekatan divalidasi pakar.
+Tugas akhir ini membandingkan WINGman Assistant sebelum dan sesudah kamus data dipasang. Penulis mengubah \emph{worker} satu kali. Perubahan itu mengirim panjang konteks ke Ollama dan memberi kamus data jatah token sendiri. Penulis lalu membekukan model, \emph{worker}, dan panjang konteks pada setiap konfigurasi. Setiap konfigurasi hanya berbeda pada isi prompt. Penulis tetap menguji sistem asli sebagai pembanding. Penulis mengembalikan pengetahuan otomatis chatbot ke keadaan awal sebelum setiap pengujian. Bab V memuat rincian skenario pengujian setelah pakar memvalidasi masalah dan pendekatan.
 
-Tugas akhir ini memakai empat teknik untuk menyusun kamus data. Keempatnya adalah ekstraksi skema, \emph{data profiling}, deskripsi LLM, dan \emph{query history mining}. \emph{Data profiling} adalah peringkasan isi setiap kolom, misalnya tipe data, nilai yang muncul, dan jumlah nilai kosong \autocite{shkapenyuk2025automaticmetadataextractiontexttosql}. \emph{Query history mining} adalah pengambilan pola query dari riwayat query dan kode aplikasi. Tabel~\ref{tab:tahapan} membandingkan kondisi sekarang dengan kebutuhan pada setiap tahap. Kolom Pustaka menyebut bagian pustaka yang dipakai, yaitu teknik, metode, data, atau hasil.
+Penulis menurunkan lingkup sistem dari masalah, tujuan, dan RQ. Penulis memilih 23 tabel draf dari dua soal asli dan 15 kebutuhan informasi engineer. Sembilan tabel berasal dari soal asli. Empat belas tabel berasal dari kebutuhan informasi, domain ESP, dan jalur \emph{foreign key}. ADEPT-SQL juga memilih 19 tabel dari topik soal harian \autocite{chen2025adeptsql}. Penulis menulis kebutuhan informasi sebagai pertanyaan kompetensi. Pertanyaan kompetensi adalah pertanyaan yang wajib bisa dijawab sistem \autocite{ren2014competencyquestions}. Tabel~\ref{tab:keterlacakan} menelusuri setiap masalah ke tujuan, RQ, dan perlakuannya dalam pengujian.
+
+\begin{table}[!htbp]
+  \caption{Keterlacakan masalah, tujuan, RQ, dan perlakuan dalam pengujian}
+  \label{tab:keterlacakan}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}X|}
+    \hline
+    \textbf{Masalah} & \textbf{Tujuan} & \textbf{RQ} & \textbf{Perlakuan dalam pengujian} \\
+    \hline
+    \textbf{M1, M2, M4} & Tujuan 1 dan 2 & RQ1 dan RQ2 & Kamus data ditambah bertahap: skema, profil nilai, dan jalur relasi \\
+    \hline
+    \textbf{M3} & Tujuan 1, 2, dan 3 & RQ1, RQ2, dan RQ3 & Deskripsi LLM, lalu dinilai pakar \\
+    \hline
+    \textbf{M5} & Tidak ada & Tidak ada & Perbaikan bawaan tetap. Error dicatat per kode \\
+    \hline
+    \textbf{M6} & Syarat teknis & Tidak ada & Panjang konteks dibuat tetap. Konfigurasi kedua mengukur efeknya \\
+    \hline
+    \textbf{M7} & Tidak ada & Tidak ada & Diukur, tidak diperbaiki \\
+    \hline
+    \textbf{M8} & Tidak ada & Tidak ada & Tidak dikerjakan. Soal uji berupa pertanyaan tunggal \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Tugas akhir ini memakai empat teknik untuk menyusun kamus data. Penulis menjalankan teknik itu berurutan: ekstraksi skema, \emph{data profiling}, \emph{query history mining}, lalu deskripsi LLM. LLM menulis arti kolom dari hasil tiga teknik sebelumnya \autocite{shkapenyuk2025automaticmetadataextractiontexttosql,giancotti2026dataatlas}. \emph{Data profiling} adalah peringkasan isi setiap kolom, misalnya tipe data, nilai yang muncul, dan jumlah nilai kosong \autocite{shkapenyuk2025automaticmetadataextractiontexttosql}. \emph{Query history mining} adalah pengambilan pola query dari riwayat query dan kode aplikasi. Tabel~\ref{tab:tahapan} membandingkan kondisi sekarang dengan kebutuhan pada setiap tahap. Kolom Pustaka menyebut bagian pustaka yang dipakai, yaitu teknik, metode, data, atau hasil.
 
 \begin{table}[!htbp]
   \caption{Tahapan, teknik, kondisi sekarang, kebutuhan, dan pustaka}
@@ -82,13 +185,13 @@ Tugas akhir ini memakai empat teknik untuk menyusun kamus data. Keempatnya adala
     \cline{2-5}
      & \emph{Data profiling} & Model tidak tahu tipe data dan nilai yang tersimpan & Tipe data dan nilai tiap kolom, misalnya kode di tabel well\_status & Teknik: statistik nilai tiap kolom \autocite{shkapenyuk2025automaticmetadataextractiontexttosql} \\
     \cline{2-5}
-     & Deskripsi LLM & Hanya 15 tabel yang punya keterangan & Arti tiap kolom & Teknik: arti kolom dari hasil \emph{profiling} \autocite{giancotti2026dataatlas} \\
-    \cline{2-5}
      & \emph{Query history mining} & Skema mencatat 439 \emph{foreign key}, tetapi cara menggabungkan tabel tercatat di kode WINGman & Jalur relasi dan contoh SQL dari kode WINGman & Teknik: jalur relasi dari log query \autocite{shkapenyuk2025automaticmetadataextractiontexttosql} \\
+    \cline{2-5}
+     & Deskripsi LLM & Hanya 15 tabel yang punya keterangan & Arti tiap kolom & Teknik: arti kolom dari hasil \emph{profiling} \autocite{giancotti2026dataatlas} \\
     \hline
-    Validasi & Validasi pakar & Arti kolom buatan LLM belum diperiksa & Penilaian benar atau salah dari pakar & Metode: kurasi pakar \autocite{giancotti2026dataatlas} \\
+    Validasi & Validasi pakar & Arti kolom buatan LLM belum diperiksa & Penilaian benar atau salah dari pakar & Metode: penilaian pakar \autocite{giancotti2026dataatlas} \\
     \hline
-    Implementasi & Kamus data di prompt dan panjang konteks & Batas pengetahuan 8.000 karakter dan panjang konteks tidak diatur & Kamus data masuk utuh ke prompt & Data: konteks bawaan 4K pada GPU di bawah 24 GiB \autocite{ollamacontextlength} \\
+    Implementasi & Kamus data di prompt dan panjang konteks & Batas pengetahuan 8.000 karakter dan panjang konteks tidak diatur & Kamus data masuk ke prompt dengan jatah token sendiri, dan panjang konteks dikirim ke Ollama & Data: konteks bawaan 4K pada GPU di bawah 24 GiB \autocite{ollamacontextlength} \\
     \hline
     Evaluasi & Lingkungan uji dan catatan kode error & Belum ada pengukuran halusinasi skema & WINGman diuji sebelum dan sesudah kamus data dengan soal dan data yang sama & Metode: kategori \emph{non-existent schema} \autocite{shen2026understanding} \\
     \hline
@@ -102,7 +205,7 @@ Tugas akhir ini memakai batasan berikut.
 \item	Pertanyaan uji berupa pertanyaan tunggal tanpa percakapan lanjutan.
 \item	Model yang diuji adalah qwen3.5:9b.
 \item	Data uji berasal dari basis data tersamar. Tugas akhir ini mengasumsikan data tersamar mewakili data produksi.
-\item	Kesalahan kalimat jawaban terhadap hasil query berada di luar lingkup. Contohnya, chatbot menulis 183 sumur berstatus DHP, padahal hasil query berjumlah 283.
+\item	Tugas akhir ini hanya mengukur kesalahan kalimat jawaban terhadap hasil query. Contohnya, chatbot menulis 183 sumur berstatus DHP, padahal hasil query berjumlah 283.
 \end{enumerate}
 
 \section{Hipotugas akhir}
@@ -124,13 +227,13 @@ Tugas akhir ini memakai \emph{Design Science Research Methodology} (DSRM) \autoc
 \begin{enumerate}
 \item	Identifikasi masalah: investigasi kode WINGman, catatan percakapan, dan wawancara pakar.
 \item	Penentuan tujuan solusi: perumusan pertanyaan penelitian, tujuan, hipotesis, dan kebutuhan kamus data.
-\item	Perancangan dan pengembangan: penyusunan kamus data dengan empat teknik dan validasi pakar.
+\item	Perancangan dan pengembangan: perbandingan cara penanganan, penyusunan kamus data, validasi pakar, dan pengaturan konteks pada \emph{worker}.
 \item	Demonstrasi: implementasi kamus data pada prompt WINGman di lingkungan uji.
-\item	Evaluasi: \emph{ablation study} dengan uji McNemar, lalu penilaian arti kolom oleh pakar dengan kappa Cohen.
+\item	Evaluasi: \emph{ablation study} dengan uji McNemar, penilaian arti kolom oleh pakar dengan kappa Cohen, dan pengukuran kesesuaian kalimat jawaban.
 \item	Komunikasi: penulisan laporan tugas akhir dan presentasi hasil.
 \end{enumerate}
 
-\emph{Ablation study} adalah pengujian yang mengubah satu komponen sistem pada satu waktu untuk mengukur kontribusi komponen tersebut. Tugas akhir ini menambah bagian kamus data satu per satu ke prompt WINGman, lalu menjalankan soal uji yang sama pada setiap konfigurasi. \textcite{macedo2026twolayer} memakai rancangan serupa pada data migas lepas pantai. Uji McNemar membandingkan dua konfigurasi yang diuji pada soal yang sama \autocite{dietterich1998approximate}. Uji ini hanya menghitung soal yang hasilnya berbeda, yaitu benar pada satu konfigurasi tetapi salah pada konfigurasi lain. Perbedaan dinyatakan bermakna bila nilai p kurang dari 0,05. Kesepakatan antarpakar diukur dengan kappa Cohen, yaitu ukuran kesepakatan yang sudah dikoreksi terhadap kesepakatan karena kebetulan \autocite{cohen1960coefficient}.
+\emph{Ablation study} adalah pengujian yang mengubah satu komponen sistem pada satu waktu untuk mengukur kontribusi komponen tersebut. Konfigurasi pertama adalah sistem asli WINGman. Konfigurasi kedua hanya menambah pengaturan panjang konteks pada \emph{worker}. Konfigurasi berikutnya menambah bagian kamus data satu per satu ke prompt WINGman. Setiap konfigurasi menjalankan soal uji yang sama. \textcite{macedo2026twolayer} memakai rancangan serupa pada data migas lepas pantai. Uji McNemar membandingkan dua konfigurasi yang diuji pada soal yang sama \autocite{dietterich1998approximate}. Uji ini hanya menghitung soal yang hasilnya berbeda, yaitu benar pada satu konfigurasi tetapi salah pada konfigurasi lain. Penulis menyatakan perbedaan bermakna bila nilai p kurang dari 0,05. Penulis mengukur kesepakatan antarpakar dengan kappa Cohen. Kappa Cohen adalah ukuran kesepakatan yang sudah dikoreksi terhadap kesepakatan karena kebetulan \autocite{cohen1960coefficient}.
 
 % --- Sistematika Penulisan ---
 \section{Sistematika Penulisan}
