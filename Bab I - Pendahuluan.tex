@@ -3,110 +3,49 @@
 \label{chap:pendahuluan}
 % --- Latar Belakang ---
 \section{Latar Belakang}
-% 5W+1H: What, kondisi umum
-Perusahaan kini memakai kecerdasan buatan dalam banyak pekerjaan. Laporan AI Index 2026 mencatat 88\% organisasi sudah memakai kecerdasan buatan \autocite{hai2026aiindex}. Salah satu pemakaiannya adalah chatbot, yaitu program yang menjawab pertanyaan lewat percakapan. LinkedIn, misalnya, membangun chatbot yang mengubah pertanyaan pengguna internal menjadi perintah SQL \autocite{chen2025texttosqlenterprisedataanalytics}.
+% Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
+Laporan AI Index 2026 mencatat 88\% organisasi sudah memakai kecerdasan buatan \autocite{hai2026aiindex}. Salah satu bentuknya adalah chatbot \emph{Text-to-SQL}, yaitu chatbot yang mengubah pertanyaan pengguna menjadi perintah SQL. LinkedIn memakai chatbot jenis ini untuk analisis data internal \autocite{chen2025texttosqlenterprisedataanalytics}. Chatbot ini memakai \emph{large language model} (LLM), yaitu model bahasa yang dilatih dari teks dalam jumlah besar. LLM cenderung menebak saat tidak yakin, sehingga muncul halusinasi, yaitu jawaban yang masuk akal tetapi salah \autocite{kalai2025whylanguagemodelshallucinate}. Pada Text-to-SQL, halusinasi berwujud nama tabel atau kolom yang tidak ada \autocite{shen2026understanding}.
 
-Chatbot modern memakai \emph{large language model} (LLM), yaitu model bahasa yang dilatih dari teks berjumlah sangat besar. LLM masih menghasilkan pernyataan yang masuk akal tetapi salah. Kesalahan jenis ini disebut halusinasi. \textcite{kalai2025whylanguagemodelshallucinate} menunjukkan bahwa halusinasi tetap muncul pada model terbaru. Menurut mereka, model cenderung menebak saat tidak yakin, mirip siswa yang menebak soal ujian. Cara pelatihan dan evaluasi model justru memberi nilai lebih pada tebakan daripada pengakuan tidak tahu.
+Masalah yang sama muncul di WINGman Web App milik PHE OSES. Engineer produksi memakai aplikasi ini untuk data sumur, pompa, dan barge atau kapal kerja lepas pantai. Chatbot WINGman Assistant di aplikasi ini memakai model qwen3.5:9b yang berjalan lokal. Basis datanya berisi 206 tabel, tetapi hanya 15 tabel yang memiliki keterangan. Contohnya, empat dari 12 perintah SQL pada satu percakapan nyata gagal. Tiga kegagalan terjadi karena nama kolom yang salah. Chatbot memakai kode status RUNNING dan P yang tidak ada di basis data. Chatbot menulis total 183 sumur berstatus DHP, padahal tabel jawabannya berjumlah 283.
 
-Perintah SQL buatan LLM juga terkena halusinasi. Model dapat menebak nama tabel atau kolom yang tidak ada. \textcite{shen2026understanding} memeriksa 4.602 perintah SQL salah dari empat teknik berbasis LLM. Mereka menyusun 27 jenis kesalahan, termasuk kolom yang tidak ada dan kolom pada tabel yang salah. Masalah ini makin berat pada basis data perusahaan yang berisi ribuan tabel. \textcite{gwimm2026beyondharness} menyimpulkan bahwa hambatan lebih banyak berasal dari konteks yang sampai ke model daripada dari modelnya.
+Investigasi kode WINGman menemukan dua akar masalah. Akar pertama ada pada \emph{prompt}, yaitu teks instruksi untuk model. Prompt WINGman tidak memuat daftar tabel, kolom, dan nilai yang ada di basis data. Akar kedua ada pada \emph{worker}, yaitu program terpisah di server yang meneruskan pertanyaan pengguna ke model. \emph{Worker} tidak mengatur panjang konteks yang dibaca model. Kedua akar tersebut berlaku untuk setiap pertanyaan, bukan hanya untuk percakapan tadi. Engineer harus memeriksa ulang setiap jawaban ke basis data. Jadwal barge menentukan urutan pemasangan dan penarikan pompa. Jawaban yang salah dapat menggeser urutan pekerjaan itu.
 
+Beberapa penelitian yang sudah ada menangani masalah serupa. \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} membangun \emph{metadata}, yaitu data penjelas isi basis data, secara otomatis dan menempati peringkat pertama BIRD. \textcite{giancotti2026dataatlas} membuat kamus data dengan LLM yang menaikkan akurasi eksekusi dari 0,52 menjadi 0,88. \textcite{he2026oilragsql} membangun OilRAGSQL, yaitu basis pengetahuan berisi definisi tabel, komentar kolom, dan glosarium untuk data lapangan minyak.
 
-% 5W+1H: Where & Who, studi kasus
-Engineer produksi di PHE OSES memakai aplikasi Wingman Web App setiap hari. Aplikasi itu menyimpan data operasional sumur, pompa, dan barge. Barge adalah kapal kerja lepas pantai. Engineer memakai data itu untuk menyusun pekerjaan harian.
+Hasil penelitian tersebut belum tentu berlaku untuk WINGman karena domain data dan model berbeda. Domain data adalah jenis data tempat penelitian diuji, lengkap dengan istilah dan kodenya. Sistem terbaik menjawab benar 91,2\% soal Spider 1.0, tetapi hanya 21,3\% soal basis data perusahaan \autocite{lei2025spider20evaluatinglanguage}. Kemampuan model juga menentukan jumlah kesalahan \autocite{shen2026understanding}.
 
-Wingman Web App memuat sebuah chatbot bernama Wingman Assistant. Engineer menulis pertanyaan dalam bahasa Indonesia. Chatbot mengubah pertanyaan itu menjadi perintah SQL. Chatbot menjalankan perintah itu ke basis data. Chatbot lalu menulis jawaban berbentuk kalimat dan tabel. Cara kerja ini disebut Text-to-SQL, yaitu pengubahan pertanyaan manusia menjadi perintah basis data.
+\begin{table}[htbp]
+  \caption{Perbedaan penelitian yang sudah ada dengan kasus WINGman}
+  \label{tab:penelitian-ada}
+  \small
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+    \hline
+    Penelitian & Yang ditangani & Domain data & Model \\
+    \hline
+    \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} & Metadata otomatis & Soal uji umum BIRD & GPT-4o \\
+    \hline
+    \textcite{giancotti2026dataatlas} & Kamus data dan kurasi pakar & Data klinis & GPT-4, Gemini, Llama 3.1 8B lokal \\
+    \hline
+    \textcite{he2026oilragsql}, OilRAGSQL & Basis pengetahuan migas & Data lapangan minyak & GPT-4 dan Qwen-max melalui API \\
+    \hline
+    \textcite{gwimm2026beyondharness} & Kartu SQL dari riwayat query & Peritel daring & Claude Sonnet, Qwen Coder 30B \\
+    \hline
+    Tugas akhir ini & Kamus data dan validasi pakar & Operasi produksi lepas pantai & LLM lokal 9B \\
+    \hline
+  \end{tabularx}
+\end{table}
 
-Pengaturan Wingman Assistant saat ini memakai model qwen3.5:9b. Model itu berjalan lokal melalui Ollama pada laptop server berkartu grafis 12 GB. Ollama adalah perangkat lunak untuk menjalankan LLM di komputer sendiri.
-
-
-% 5W+1H: When & What, kejadian di Wingman
-Basis data Wingman berukuran besar. Skema public berisi 206 tabel dan 3.249 kolom. Skema itu memuat 439 foreign key. Foreign key adalah penanda hubungan antartabel. Chatbot harus memilih tabel yang benar dari 206 pilihan tersebut.
-
-Basis data hampir tidak menyimpan penjelasan tabel. PostgreSQL menyediakan fasilitas COMMENT untuk menyimpan keterangan. Skema public memakai fasilitas itu pada 15 tabel dan 1 kolom saja. Chatbot menebak arti sebuah kolom dari nama kolomnya.
-
-Penulis merekam satu percakapan nyata di Wingman Assistant. Engineer menanyakan jadwal barge hari itu. Chatbot menjalankan 25 langkah untuk menjawab satu pertanyaan. Chatbot menjalankan 12 perintah SQL di dalam 25 langkah itu. Empat perintah gagal dan mengembalikan pesan kesalahan.
-
-Chatbot memakai alias ws tanpa mendaftarkan tabelnya pada klausa FROM. PostgreSQL menolak perintah itu dengan kode 42P01 pada langkah 8. Chatbot lalu memanggil kolom platform\_code pada tabel platforms. Kolom itu tidak ada. PostgreSQL menolak perintah itu dengan kode 42703 pada langkah 10. Chatbot kemudian memanggil kolom barage\_name pada tabel barges. Nama kolom yang benar adalah barge\_name. Chatbot salah mengetik satu huruf pada langkah 14. Chatbot terakhir memanggil kolom status pada tabel barge\_schedules. Tabel itu memakai nama esp\_status. Penulis menduga kesalahan keempat terjadi pada langkah 18.
-
-Chatbot mencatat satu temuan penting pada langkah 23. Catatan itu menyatakan data barge hari ini kosong. Chatbot tetap menulis judul "Jadwal Barge Aktif Hari Ini" pada jawaban akhirnya. Jawaban itu memuat dua baris bertanggal Oktober sampai November 2026. Chatbot sendiri menyebut tanggal hari ini 24 Mei 2026. Jawaban akhir tidak cocok dengan catatan langkah 23.
-
-Jawaban itu memuat dua nomor baris, yaitu 6084 dan 6085. Penulis mencari kedua nomor tersebut di data contoh. Data contoh memuat nomor 6463 sampai 6608. Penulis belum menemukan penyebab selisih ini.
-
-Engineer lalu menanyakan sumber data kepada chatbot. Chatbot menjawab bahwa dirinya tidak menjalankan query. Catatan langkah mencatat 12 perintah SQL. Pengakuan chatbot bertentangan dengan catatan langkahnya sendiri.
-
-Percakapan yang sama juga memuat pertanyaan statistik status sumur. Perintah SQL chatbot memakai kode status RUNNING dan P. Kedua kode itu tidak ada pada tabel well\_status. Tabel jawaban chatbot mencatat jumlah DHP 61, 174, dan 48 untuk tiga area. Baris total pada jawaban yang sama menulis 183. Jumlah ketiga angka itu sebenarnya 283.
-
-
-% 5W+1H: Why, dari gejala ke akar masalah
-Penulis membagi masalah di atas menjadi dua kelas. Kelas pertama adalah pemilihan tabel dan kolom. Chatbot memilih tabel atau kolom yang salah, lalu perintah SQL gagal. Kelas kedua adalah kesesuaian jawaban dengan hasil query. Chatbot menulis nilai yang tidak punya pasangan pada hasil query.
-
-Gejala di atas belum tentu menunjukkan akar masalah. Penulis menelusuri kode Wingman untuk mencari kesalahan penentu. Kesalahan penentu adalah kesalahan yang mengubah hasil gagal menjadi berhasil jika diperbaiki \autocite{zhang2025whichagent}. Penulis menemukan tiga akar untuk kelas pertama.
-
-Akar pertama ada pada \emph{prompt}, yaitu teks instruksi yang dikirim ke model. Prompt chatbot hanya memuat aturan, pengetahuan tambahan maksimal 8.000 karakter, dan riwayat percakapan. Prompt itu tidak memuat daftar tabel dan kolom. Chatbot sendiri menulis bahwa dirinya tidak punya dokumentasi skema barge.
-
-Akar kedua ada pada basis data. Basis data tidak menyimpan arti kolom dan daftar nilai yang sah. Akar ini cocok dengan munculnya kode RUNNING dan P.
-
-Akar ketiga ada pada pengaturan panjang konteks. Pekerja chatbot tidak mengirim pengaturan panjang konteks ke Ollama. Ollama memakai konteks 4K \emph{token} sebagai bawaan untuk kartu grafis di bawah 24 GiB \autocite{ollamacontextlength}. Panjang konteks yang benar-benar berlaku di laptop server belum diketahui. Penulis menduga riwayat langkah terpotong sehingga chatbot meminta ulang daftar kolom pada langkah 19.
-
-Kelas kedua punya akar yang berbeda. Riwayat percakapan hanya membawa teks pertanyaan dan jawaban, tanpa perintah SQL dan hasilnya. Penulis juga tidak menemukan langkah pencocokan jawaban dengan hasil query sebelum jawaban dikirim.
-
-
-% 5W+1H: Why, urgensi
-Engineer produksi memakai jawaban chatbot untuk pekerjaan lapangan. Jadwal barge menentukan urutan pemasangan dan penarikan pompa. Jawaban yang salah dapat menggeser urutan pekerjaan itu. Engineer harus memeriksa ulang setiap jawaban ke basis data. Pemeriksaan ulang menghapus manfaat chatbot itu sendiri. Penulis belum mengukur kerugian waktu maupun biaya dalam angka.
-
-
-% 5W+1H: How, solusi yang sudah ada
-Peneliti sudah menguji beberapa cara untuk akar kelas pertama. \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} membangun metadata basis data secara otomatis. Metadata adalah data yang menjelaskan isi dan arti data lain. Mereka memakai profil data, analisis riwayat query, dan ringkasan SQL buatan LLM. BIRD adalah kumpulan soal uji Text-to-SQL yang umum dipakai. Sistem mereka menempati peringkat pertama BIRD pada 2024 dan 2025 dengan profil data saja. Mereka juga mencatat bahwa pakar sering tidak memahami seluruh isi basis datanya sendiri.
-
-\textcite{giancotti2026dataatlas} membuat kamus data dengan LLM untuk data klinis. Akurasi eksekusi adalah bagian soal yang hasil query-nya sama dengan jawaban benar. Kamus itu menaikkan akurasi eksekusi dari 0,52 menjadi 0,88. Mereka menyarankan agar hasil LLM melengkapi kurasi pakar, bukan menggantikannya.
-
-\textcite{he2026oilragsql} menerapkan cara serupa pada data lapangan minyak. Basis pengetahuan mereka memuat definisi tabel, komentar kolom, glosarium istilah, dan aturan hitung bisnis. Kesalahan penyelarasan skema mencakup 38\% kesalahan pada soal sulit dan sangat sulit.
-
-\textcite{gwimm2026beyondharness} menguji 5.176 query produksi dari sebuah peritel daring besar. Kartu referensi SQL dari riwayat query menaikkan kemiripan struktur SQL sebesar 12 sampai 25\% secara relatif. Perbaikan alur pengambilan konteks hanya menaikkan 3 sampai 12\%. Kesalahan pengaitan pertanyaan ke skema tetap menjadi jenis kesalahan terbanyak, yaitu sekitar 42 sampai 44\%.
-
-Peneliti juga menguji Text-to-SQL pada basis data perusahaan. \textcite{lei2025spider20evaluatinglanguage} menyusun Spider 2.0. Sistem terbaik hanya menjawab benar 21,3\% soal pada kumpulan itu. Sistem serupa menjawab benar 73,0\% pada BIRD dan 91,2\% pada Spider 1.0.
-
-\textcite{liao2026entsqlbenchmarkgroundingtexttosql} menyusun EntSQL. Mereka mencatat 96,0\% contoh membutuhkan pengetahuan di luar skema. Sistem terbaik menjawab benar 15,9\% dengan dokumen panjang. Nilai itu naik menjadi 21,4\% dengan keterangan ringkas.
-
-
-% 5W+1H: How, kelemahan solusi yang ada
-Cara di atas belum menjawab kasus Wingman sepenuhnya. Shkapenyuk dkk. memakai GPT-4o, sedangkan He dkk. memakai GPT-4 dan Qwen-max. Gwimm dan Eisenach memakai Claude Sonnet dan Qwen Coder 30B. Wingman memakai model 9 miliar parameter yang berjalan lokal. Konteks Wingman juga belum memuat skema, arti kolom, maupun nilai yang sah. Penulis belum menemukan studi yang menguji metadata skema pada model lokal seukuran itu di basis data produksi migas.
-
-
-% 5W+1H: How, solusi tugas akhir ini
-Celah tersebut menjadi dasar tugas akhir ini. Tugas akhir ini berfokus pada kelas pertama, yaitu pemilihan tabel dan kolom. Penulis mengusulkan \emph{schema card}, yaitu dokumen ringkas tentang arti, nilai sah, dan relasi setiap tabel. Penulis menyusun schema card dari skema, profil data, dan kode aplikasi Wingman. Pakar Wingman memeriksa isi schema card sebelum chatbot memakainya. Penulis juga memasang panjang konteks yang cukup agar schema card tidak terpotong. Penulis lalu mengukur pengaruh schema card terhadap jumlah tabel, kolom, dan nilai karangan. Kelas kedua menjadi saran untuk penelitian lanjutan.
-
-% === TEKS LAMA PENULIS, dipindah ke komentar 11 Oktober 2026 ===
-% Alasan: memakai sumber 2024 (CHESS, Uber, Pinterest) atau rencana lama (pemilihan tabel bertahap & pemeriksaan jawaban).
-% Teks tidak dihapus. Hapus blok komentar ini kalau penulis sudah tidak memakainya.
-% Peneliti lain sudah mengusulkan beberapa cara. \textcite{talaei2024chesscontextualharnessingefficient} membangun sistem CHESS. Sistem itu memakai komponen Schema Selector. Komponen tersebut memangkas skema sebelum sistem menulis SQL. Pada skema gabungan berisi 4.337 kolom, komponen itu menaikkan akurasi sebesar 2\%. Komponen itu juga memakai token 5 kali lebih sedikit.
-%
-% Talaei dkk. menguji sistemnya tanpa sebagian komponen. Tanpa langkah select\_tables, nilai execution accuracy turun 6,12 poin. Tanpa langkah revise, nilai tersebut turun 6,80 poin. Pengujian itu memakai 147 soal.
-%
-% Perusahaan besar sudah memakai cara serupa. Uber melaporkan sistem QueryGPT pada tahun 2024. Uber memperkirakan waktu menulis query turun dari 10 menit menjadi 3 menit. Pinterest melaporkan tugas 35\% lebih cepat. Pinterest juga melaporkan penerimaan jawaban pertama naik dari 20\% menjadi di atas 40\%.
-%
-% Cara di atas belum menjawab kasus Wingman sepenuhnya. Talaei dkk. memakai skema gabungan, bukan basis data produksi. Konfigurasi terbaik mereka memakai 20 kandidat SQL dan 10 uji unit per pertanyaan. Wingman membatasi satu pekerjaan pada 60 perintah SQL. Penulis menilai konfigurasi tersebut berat untuk batas itu.
-%
-% Uber dan Pinterest melaporkan angka dari catatan internal. Uber menyebut angkanya sebagai perkiraan. Pinterest menulis bahwa datanya tidak mengontrol perbedaan tugas. Penulis memakai kedua angka itu sebagai gambaran arah saja.
-%
-% Cara di atas mengukur satu hal, yaitu kebenaran perintah SQL. Cara itu tidak memeriksa kalimat jawaban. Kasus Wingman menunjukkan perintah SQL berhasil pada langkah 24. Jawaban akhir tetap tidak cocok dengan hasil query. \textcite{NEURIPS2023_ed3fea90} menunjukkan penjelasan model bisa masuk akal tetapi tidak setia pada proses aslinya.
-%
-% Celah tersebut menjadi dasar tugas akhir ini. Penulis akan membandingkan beberapa cara pemilihan tabel. Penulis juga akan membandingkan beberapa cara pemeriksaan jawaban. Penulis mengukur keduanya pada basis data Wingman.
-%
+Tugas akhir ini belum menemukan uji serupa pada LLM lokal 9B di basis data produksi migas. Uji ini penting karena perusahaan migas membatasi data sensitif pada lingkungan yang disetujui \autocite{taiwo2026evaluating}. WINGman memakai model lokal, sehingga hasil penelitian dengan model besar perlu diuji ulang. Tugas akhir ini mengusulkan kamus data (\emph{data dictionary}) berisi arti kolom, nilai, dan relasi tiap tabel.
 
 % --- Rumusan Masalah ---
 \section{Rumusan Masalah}
-Wingman Assistant menghasilkan jawaban yang belum dapat dipercaya engineer. Chatbot memilih tabel dan kolom yang salah. Chatbot juga menulis nilai tanpa pasangan pada hasil query. Kedua hal itu muncul pada satu percakapan yang sama.
+% Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
+Tugas akhir ini menjawab tiga pertanyaan penelitian berikut.
 
-Engineer memakai jawaban chatbot untuk memutuskan pekerjaan lapangan. Jawaban yang salah dapat menggeser urutan pekerjaan pompa. Engineer akhirnya memeriksa ulang setiap jawaban secara manual. Chatbot kehilangan manfaatnya jika keadaan ini dibiarkan.
-
-Penulis mengusulkan dua tambahan pada sistem. Tambahan pertama memilih tabel secara bertahap dengan bantuan tabel deskripsi. Tambahan kedua memeriksa setiap nilai jawaban terhadap hasil query. Penulis menguji kedua tambahan itu pada basis data Wingman.
-
-Rumusan masalah tugas akhir ini adalah sebagai berikut.
 \begin{enumerate}
-\item	Cara pemilihan tabel mana yang paling menurunkan jumlah perintah SQL gagal pada basis data Wingman? Penulis membandingkan empat cara pada Bab III, yaitu prompt berisi seluruh skema, prompt berisi contoh per kasus, pencarian kemiripan teks, dan pemilihan tabel bertahap dengan tabel deskripsi.
-\item	Cara pemeriksaan jawaban mana yang paling banyak menangkap nilai tanpa pasangan pada hasil query? Penulis membandingkan empat cara pada Bab III, yaitu tanpa pemeriksaan, instruksi pada prompt, pencocokan nilai otomatis ke baris hasil query, dan pemeriksaan oleh model kedua.
-\item	Berapa tambahan waktu, token, dan jumlah perintah SQL dari kedua cara terpilih? Penulis membandingkan empat konfigurasi pada Bab III, yaitu sistem sekarang, sistem dengan pemilihan tabel saja, sistem dengan pemeriksaan jawaban saja, dan sistem dengan keduanya.
+\item	Apakah kamus data menurunkan jumlah tabel, kolom, dan nilai yang tidak ada di basis data pada SQL WINGman Assistant?
+\item	Bagian kamus data mana yang paling berpengaruh: struktur tabel, arti dan nilai kolom, atau jalur relasi?
+\item	Seberapa sesuai isi kamus data buatan LLM dengan penilaian pakar WINGman?
 \end{enumerate}
 
 % --- Tujuan ---
@@ -122,39 +61,58 @@ Penulis mengukur seluruh kriteria di atas terhadap sistem Wingman yang berjalan 
 
 % --- Batasan Masalah ---
 \section{Ruang Lingkup, Asumsi, dan Batasan Masalah}
-Ruang lingkup tugas akhir ini adalah sebagai berikut.
-\begin{enumerate}
-\item	Objek penelitian adalah Wingman Assistant pada Wingman Web App milik PHE OSES.
-\item	Pengguna yang ditinjau adalah engineer produksi.
-\item	Domain data mencakup produksi sumur, pemasangan dan penarikan pompa ESP, serta penanganan masalah pompa. ESP adalah pompa listrik yang dipasang di dalam sumur.
-\item	Keluaran tugas akhir ini berupa prototipe untuk eksperimen, bukan produk siap pakai.
-\end{enumerate}
+% Isi bagian ini disalin otomatis dari docs/Konsultasi-Latar-Belakang.md oleh tools/md-ke-babI.py. Sunting Markdown-nya, lalu jalankan ulang.
+Tugas akhir ini membandingkan empat kondisi WINGman Assistant pada Tabel~\ref{tab:kondisi}. Setiap kondisi menambah satu jenis isi kamus data ke kondisi sebelumnya. Rancangan bertingkat ini mengikuti tingkat konteks bertingkat pada \textcite{gwimm2026beyondharness}. Jumlah kondisi berasal dari tiga jenis isi kamus data ditambah satu kondisi pembanding.
 
-Batasan jumlah tabel adalah sebagai berikut.
+\begin{table}[htbp]
+  \caption{Kondisi pengujian}
+  \label{tab:kondisi}
+  \small
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{1.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+    \hline
+    Kondisi & Isi kamus data di prompt & Tahap yang menyiapkan \\
+    \hline
+    A & Tidak ada, sama dengan sistem sekarang & Tidak ada \\
+    \hline
+    B & Struktur tabel dan relasi & Ekstraksi skema \\
+    \hline
+    C & Isi B ditambah arti dan nilai kolom & \emph{Data profiling}, deskripsi LLM, dan validasi pakar \\
+    \hline
+    D & Isi C ditambah jalur relasi dan contoh SQL & Penambangan riwayat query dari kode WINGman \\
+    \hline
+  \end{tabularx}
+\end{table}
 
-Penulis memakai sebagian tabel, bukan seluruh 206 tabel. Kandidat tabel inti berjumlah 12, yaitu well\_status, well\_status\_records, esp\_shut\_in\_events, esp\_dhp\_events, esp\_installations, esp\_pump\_request, esp\_troubleshooting\_events, barge\_schedules, jobs, wells, platforms, dan barges. Penulis menetapkan jumlah akhirnya bersama domain expert.
+Alur kerja WINGman yang lain tidak berubah. Perubahan hanya ada pada isi prompt, batas pengetahuan 8.000 karakter, dan pengaturan panjang konteks. \emph{Data profiling} adalah peringkasan isi setiap kolom, misalnya nilai yang muncul, jumlah nilai kosong, dan rentang angka \autocite{shkapenyuk2025automaticmetadataextractiontexttosql}. Tabel~\ref{tab:tahapan} menjelaskan setiap tahap beserta alasan dan landasannya.
 
-Penulis membatasi jumlah tabel karena tiga alasan. Pertama, penulis menulis deskripsi tabel dan kolom secara manual. Basis data hanya menyimpan keterangan pada 15 tabel dan 1 kolom. Menulis keterangan untuk 3.249 kolom melampaui waktu satu semester. Kedua, data contoh hanya berisi isi pada 166 dari 206 tabel. Tabel kosong tidak dapat diuji. Ketiga, jumlah penilai terbatas. Tabel al\_area\_engineers berisi 3 baris. Penulis belum mengonfirmasi angka itu kepada pihak PHE OSES.
+\begin{table}[htbp]
+  \caption{Tahapan, komponen, alasan, dan landasan}
+  \label{tab:tahapan}
+  \small
+  \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.1cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+    \hline
+    Tahap & Komponen & Kenapa perlu & Landasan \\
+    \hline
+    Penyusunan kamus data & Ekstraksi skema & Prompt belum memuat tabel, kolom, dan relasi & Relasi antartabel sering tidak terdokumentasi, \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} \\
+    \cline{2-4}
+     & \emph{Data profiling} & Nilai dan format kolom belum diketahui, contohnya kode RUNNING dan P & \emph{Data profiling}, \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} \\
+    \cline{2-4}
+     & Deskripsi LLM & Hanya 15 tabel yang punya keterangan & LLM menulis arti kolom dari hasil \emph{data profiling}, \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} dan \textcite{giancotti2026dataatlas} \\
+    \cline{2-4}
+     & Penambangan riwayat query & Jalur relasi dan aturan bisnis tidak tertulis di skema & Riwayat query menemukan 25\% jalur relasi yang tidak tercatat, \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} \\
+    \hline
+    Validasi & Validasi pakar & LLM dapat salah menulis arti kolom & Kurasi pakar, \textcite{giancotti2026dataatlas} \\
+    \hline
+    Implementasi & Kamus data di prompt, batas ukuran prompt, dan panjang konteks & Menutup akar pertama dan kedua. Deskripsi yang panjang dapat melewati batas token & Batas token pada deskripsi panjang, \textcite{shkapenyuk2025automaticmetadataextractiontexttosql}, dan dokumentasi Ollama \autocite{ollamacontextlength} \\
+    \hline
+    Evaluasi & Lingkungan uji dan catatan kode error & Kondisi A sampai D memakai soal dan data yang sama. Kode 42703 dan 42P01 menandai kolom dan tabel yang tidak ada & Taksonomi kesalahan SQL, \textcite{shen2026understanding} \\
+    \hline
+  \end{tabularx}
+\end{table}
 
-Batasan domain adalah sebagai berikut.
+Komponen tersebut tidak saling menggantikan. Setiap komponen mengisi bagian kamus data yang berbeda atau menutup akar yang berbeda. \textcite{shkapenyuk2025automaticmetadataextractiontexttosql} menggabungkan beberapa teknik karena setiap teknik menghasilkan metadata yang berbeda. Gabungan metadata mereka menghasilkan akurasi tertinggi. RQ2 menguji apakah setiap bagian benar-benar dibutuhkan pada kasus WINGman.
 
-Penulis tidak memakai skema staging dan skema etl. Skema staging berisi 38 tabel. Skema etl berisi 11 tabel. Penulis juga tidak memakai modul qaqc, modul scale, dan modul mbti.
-
-Penulis membuang kedua skema itu karena dua alasan. Pertama, 37 dari 38 nama tabel di staging kembar dengan nama tabel di public. Nama kembar menambah pilihan salah bagi chatbot. Kedua, aturan Wingman sendiri melarang chatbot memakai kedua skema tersebut. Chatbot mencatat larangan itu pada langkah berpikirnya.
-
-Batasan perangkat dan konfigurasi adalah sebagai berikut.
-
-Penulis memakai konfigurasi Wingman yang berjalan sekarang. Model bawaannya adalah qwen3.5:9b. Nilai temperature adalah 0,2. Jendela konteks berukuran 65.536 token. Batas hasil query adalah 300 baris. Batas waktu satu perintah adalah 30 detik. Batas perintah per pekerjaan adalah 60. Batas riwayat percakapan adalah 300 pesan.
-
-Penulis memakai batas yang sama dengan sistem berjalan agar hasil ukurnya dapat dibandingkan. Perangkat eksperimen belum ditetapkan. Penulis memilih antara GPU pada laptop pribadi dan GPU sewa di cloud. Penulis memutuskan pilihan itu setelah menghitung biayanya.
-
-Asumsi tugas akhir ini adalah sebagai berikut.
-\begin{enumerate}
-\item	Data contoh mewakili data produksi. Penulis belum menguji asumsi ini.
-\item	Nama sumur pada data contoh sudah diganti alias. Manifest mencatat nilai wellNameLeakCount sama dengan 0.
-\item	Petroleum engineer produksi menilai benar atau salahnya jawaban chatbot.
-\item	Arti istilah operasional seperti DHP, shut-in, SI, dan SIS berasal dari domain expert. Penulis belum memperoleh penjelasan tersebut.
-\end{enumerate}
+Tugas akhir ini dibatasi pada 23 tabel draf, pertanyaan tunggal tanpa percakapan lanjutan, model qwen3.5:9b, dan basis data tersamar. Metrik RQ1 dan RQ2 adalah persentase soal dengan tabel, kolom, atau nilai yang tidak ada di basis data. Uji McNemar menguji perbedaan antarkondisi. Metrik RQ3 adalah kesepakatan pakar dengan kappa Cohen.
 
 \section{Hipotugas akhir}
 Catatan: kategori tugas akhir ini belum ditetapkan. Dosen pembimbing belum memutuskan antara Penelitian dan Proyek Akhir. Bentuk subbab ini mengikuti keputusan tersebut. Penulis menyiapkan dua versi di bawah ini.
