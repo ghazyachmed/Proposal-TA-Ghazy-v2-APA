@@ -60,6 +60,50 @@ Hasilnya `out/ProposalTA.docx`, peringatan pandoc di `out/pandoc.log`.
 - DOCX adalah keluaran tambahan untuk berbagi draf. Format resmi yang dinilai
   tetap PDF hasil XeLaTeX.
 
+## Naskah utama di Google Docs
+
+Draf naskah disunting di Google Doc "draft Proposal 18223093 Ghazy Achmed",
+ID `1dvHYuSI2e3BaW_fjLCBIxPK_snFcrYrLdnsgkB4_OjI`. Aturan ini berlaku untuk semua
+RoomChat, lokal maupun cloud.
+
+- Tab utama naskah adalah **"Prop TA"**. Susunannya mengikuti `ProposalTA.tex`
+  utuh: halaman depan, Bab I sampai Bab V, Daftar Pustaka, dan Lampiran. Bab II
+  sampai Bab V baru berisi judul subbab template. Tab "Poin", "Paragraf",
+  "PERTANYAAN", dan "draft Scope" adalah bahan kerja penulis. Jangan menyunting
+  tab itu tanpa permintaan.
+- Sunting lewat konektor Google Docs (`read_doc`, `update_doc`). Selalu pakai
+  `writeMode: SUGGEST`, sehingga setiap perubahan muncul sebagai saran yang
+  diterima atau ditolak penulis. Mode `EDIT` hanya dipakai bila penulis memintanya.
+- Baca dokumen dulu, lalu kirim `requiredRevisionId` dari bacaan terakhir. Bila
+  revisi berubah, baca ulang. Jangan menebak indeks.
+- Saran format (font, ukuran, tebal, miring) yang ditumpuk di atas teks sisipan
+  yang masih berstatus saran bisa hilang saat penulis menerimanya. Teks lalu jatuh
+  ke gaya bawaan Arial 11. Sesudah penulis menerima sisipan, baca ulang dokumen,
+  bandingkan format per karakter, lalu sarankan format yang kurang.
+- Format naskah mengikuti `ta-sti.cls`: A4, margin atas, bawah, dan kanan 3 cm,
+  margin kiri 4 cm, Times New Roman, isi 12 pt, spasi 1,5, jarak antarparagraf 12 pt,
+  judul bab 14 pt tebal di tengah, tabel 10 pt. Margin di `sectionStyle` menimpa
+  margin `documentStyle`, jadi periksa keduanya. Gambar disisipkan lewat URL publik, misalnya
+  berkas `raw.githubusercontent.com` dari repo ini, karena API tidak menerima berkas lokal.
+- Hasil `read_doc` biasanya terlalu besar untuk konteks dan disimpan ke berkas.
+  Olah berkas itu dengan Python atau jq, lalu cocokkan teks sebelum menghitung indeks.
+- Tulis sitasi di Doc dalam format APA jadi, misalnya "(Kalai dkk. 2025)" atau
+  "Macedo dkk. (2026)". Jangan menulis kunci seperti `[@kunci]`. Saat menyalin ke
+  `.tex`, petakan sitasi ke kunci di `daftar-pustaka.bib`.
+- Alur kerja: Claude menulis saran, penulis menerima atau menolak, penulis boleh
+  menjalankan Paperpal sendiri, lalu sesi tex menyalin isi tab "Prop TA" yang sudah
+  diterima ke berkas `.tex` bab yang sesuai dan mengompilasi PDF. Halaman depan
+  dan Daftar Pustaka di Doc hanya cerminan; sumbernya tetap berkas frontmatter
+  `.tex` dan `daftar-pustaka.bib`. Claude tidak bisa
+  menjalankan Paperpal karena tidak ada konektornya.
+- Jangan mengubah izin berbagi Doc, dan jangan menyalin isi Doc ke berkas lain yang
+  di-commit ke repo publik.
+- Bila sesi tidak punya alat Google Docs, minta penulis menyalakan konektor
+  Google Drive di pengaturan Connectors claude.ai. Jangan menyunting Doc lewat
+  cara lain.
+- `docs/Konsultasi-Latar-Belakang.md` dan `tools/konsultasi-docx.sh` sudah usang
+  sejak naskah pindah ke Google Docs.
+
 ## Aturan nama file berspasi
 
 Banyak file bab dan frontmatter memakai spasi di namanya, misalnya
