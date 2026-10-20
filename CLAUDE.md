@@ -62,9 +62,12 @@ Hasilnya `out/ProposalTA.docx`, peringatan pandoc di `out/pandoc.log`.
 
 ## Naskah utama di Google Docs
 
-Draf naskah disunting di Google Doc "draft Proposal 18223093 Ghazy Achmed",
-ID `1dvHYuSI2e3BaW_fjLCBIxPK_snFcrYrLdnsgkB4_OjI`. Aturan ini berlaku untuk semua
-RoomChat, lokal maupun cloud.
+Naskah disunting di Google Doc berikut. Aturan ini berlaku untuk semua RoomChat,
+lokal maupun cloud.
+
+- Judul Doc: **"draft Proposal 18223093 Ghazy Achmed"**
+- ID Doc: `1dvHYuSI2e3BaW_fjLCBIxPK_snFcrYrLdnsgkB4_OjI`
+- Buka Doc dengan ID. Bila ID gagal dibuka, cari Doc lewat judulnya di Google Drive.
 
 - Tab utama naskah adalah **"Prop TA"**. Susunannya mengikuti `ProposalTA.tex`
   utuh: halaman depan, Bab I sampai Bab V, Daftar Pustaka, dan Lampiran. Bab II
